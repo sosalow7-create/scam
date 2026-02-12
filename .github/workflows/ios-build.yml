@@ -31,32 +31,58 @@ jobs:
         echo "📱 Swift files:"
         find . -name "*.swift" -type f
     
-    - name: Build with Swift Package Manager
+    - name: Generate Xcode project
       run: |
-        echo "🔨 Building SCAM Swift Package..."
+        echo "🔨 Generating Xcode project from Swift Package..."
+        swift package generate-xcodeproj
+        echo "✅ Xcode project generated!"
+        ls -la *.xcodeproj
+    
+    - name: Build app with xcodebuild
+      run: |
+        echo "🔨 Building SCAM for iOS..."
         
-        swift build -c release --product SCAM
+        xcodebuild -project SCAM.xcodeproj \
+          -scheme SCAM-Package \
+          -sdk iphoneos \
+          -configuration Release \
+          -derivedDataPath ./DerivedData \
+          ONLY_ACTIVE_ARCH=NO \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          ENABLE_BITCODE=NO \
+          build
         
         echo "✅ Build completed!"
-      continue-on-error: true
+        find DerivedData -name "*.app" -type d
     
-    - name: Package Swift files as IPA
+    - name: Create unsigned IPA
       run: |
-        echo "📦 Creating installable package..."
+        echo "📦 Creating IPA from compiled app..."
         
-        mkdir -p build/Payload/SCAM.app
+        # Find the built .app
+        APP_PATH=$(find DerivedData -name "*.app" -type d | grep -v "Intermediates" | head -n 1)
         
-        # Copy all source files
-        if [ -d "Sources/SCAM" ]; then
+        if [ -z "$APP_PATH" ]; then
+          echo "❌ Built app not found!"
+          echo "Creating fallback IPA with sources..."
+          mkdir -p build/Payload/SCAM.app
           cp -r Sources/SCAM/* build/Payload/SCAM.app/
+          cp -r Info.plist build/Payload/SCAM.app/
         else
-          cp -r Models Views ViewModels Services Utilities build/Payload/SCAM.app/ 2>/dev/null || true
-          cp SCAMApp.swift build/Payload/SCAM.app/ 2>/dev/null || true
+          echo "✅ Found app: $APP_PATH"
+          
+          # Create Payload folder
+          mkdir -p build/Payload
+          
+          # Copy app to Payload
+          cp -r "$APP_PATH" build/Payload/
+          
+          # Show contents
+          ls -la build/Payload/
+          ls -la build/Payload/*.app/
         fi
-        
-        # Copy resources
-        cp Info.plist build/Payload/SCAM.app/ 2>/dev/null || true
-        cp -r Assets.xcassets build/Payload/SCAM.app/ 2>/dev/null || true
         
         # Create IPA
         cd build
@@ -65,6 +91,7 @@ jobs:
         
         echo "✅ IPA created!"
         ls -lh build/SCAM.ipa
+        unzip -l build/SCAM.ipa | head -20
     
     - name: Package artifacts
       run: |

@@ -31,24 +31,20 @@ jobs:
         echo "📱 Swift files:"
         find . -name "*.swift" -type f
     
-    - name: Build with xcodebuild from Swift Package
+    - name: List available schemes
       run: |
-        echo "🔨 Building SCAM for iOS from Swift Package..."
-        
-        xcodebuild -scheme SCAM \
-          -sdk iphoneos \
-          -configuration Release \
-          -derivedDataPath ./DerivedData \
-          ONLY_ACTIVE_ARCH=NO \
-          CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO \
-          ENABLE_BITCODE=NO \
-          build
-        
+        echo "📋 Checking available schemes..."
+        xcodebuild -list
+        echo ""
+        echo "📋 Checking Swift Package..."
+        swift package describe
+      continue-on-error: true
+    
+    - name: Build library with Swift
+      run: |
+        echo "🔨 Building SCAM library..."
+        swift build -c release
         echo "✅ Build completed!"
-        echo "📂 Looking for built app..."
-        find DerivedData -name "*.app" -type d
       continue-on-error: true
     
     - name: Create unsigned IPA

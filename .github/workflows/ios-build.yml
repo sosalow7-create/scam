@@ -1,0 +1,61 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+    
+    - name: Show Xcode version
+      run: xcodebuild -version
+    
+    - name: Build project
+      run: |
+        xcodebuild clean build \
+          -project SCAM.xcodeproj \
+          -scheme SCAM \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+          CODE_SIGNING_ALLOWED=NO
+    
+    - name: Run tests (if available)
+      continue-on-error: true
+      run: |
+        xcodebuild test \
+          -project SCAM.xcodeproj \
+          -scheme SCAM \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+          CODE_SIGNING_ALLOWED=NO
+    
+    - name: Archive build
+      if: success()
+      run: |
+        xcodebuild archive \
+          -project SCAM.xcodeproj \
+          -scheme SCAM \
+          -archivePath build/SCAM.xcarchive \
+          -sdk iphonesimulator \
+          CODE_SIGNING_ALLOWED=NO
+    
+    - name: Upload build artifact
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: SCAM-iOS-Build
+        path: build/SCAM.xcarchive
+        retention-days: 7

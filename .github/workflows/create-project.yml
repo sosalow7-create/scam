@@ -1,0 +1,33 @@
+name: Create Xcode Project
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install xcodeproj gem
+        run: gem install xcodeproj
+      
+      - name: Generate Xcode Project
+        run: |
+          ruby << 'RUBY'
+          require 'xcodeproj'
+          
+          project = Xcodeproj::Project.new('SCAM.xcodeproj')
+          target = project.new_target(:application, 'SCAM', :ios, '16.0')
+          
+          # Add files
+          group = project.main_group.new_group('SCAM')
+          Dir.glob('Sources/SCAM/**/*.swift').each do |file|
+            file_ref = group.new_file(file)
+            target.add_file_references([file_ref])
+          end
+          
+          project.save
+          RUBY
+          
+          echo "✅ Xcode project created!"

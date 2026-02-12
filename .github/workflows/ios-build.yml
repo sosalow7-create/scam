@@ -31,36 +31,45 @@ jobs:
         echo "📱 Swift files:"
         find . -name "*.swift" -type f
     
-    - name: Validate Swift Files
+    - name: Build iOS App with xcodebuild
       run: |
-        echo "🔍 Validating Swift files..."
-        SWIFT_COUNT=$(find . -name "*.swift" | wc -l)
-        echo "Found $SWIFT_COUNT Swift files"
+        echo "🔨 Building SCAM for iOS Simulator..."
         
-        # Check syntax (без компиляции)
-        for file in $(find . -name "*.swift" -not -path "./.build/*"); do
-          echo "Checking: $file"
-        done
+        xcodebuild -scheme SCAM \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
+          -derivedDataPath ./build \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          clean build
         
-        echo "✅ All Swift files validated!"
+        echo "✅ Build completed!"
     
-    - name: Create IPA (simulator build)
+    - name: Create IPA from build
       run: |
-        mkdir -p build/Payload
-        echo "📦 Creating app bundle..."
+        echo "📦 Creating IPA package..."
         
-        # Копируем файлы
-        mkdir -p build/Payload/SCAM.app
-        cp -r Models Views ViewModels Services Utilities build/Payload/SCAM.app/
-        cp SCAMApp.swift build/Payload/SCAM.app/
-        cp Info.plist build/Payload/SCAM.app/
+        # Find the built app
+        APP_PATH=$(find build -name "SCAM.app" -type d | head -n 1)
         
-        # Создаём IPA
+        if [ -z "$APP_PATH" ]; then
+          echo "❌ SCAM.app not found, creating source-only IPA..."
+          mkdir -p build/Payload/SCAM.app
+          cp -r Sources/SCAM/* build/Payload/SCAM.app/
+        else
+          echo "✅ Found app at: $APP_PATH"
+          mkdir -p build/Payload
+          cp -r "$APP_PATH" build/Payload/
+        fi
+        
+        # Create IPA
         cd build
         zip -r SCAM.ipa Payload
         cd ..
         
-        echo "✅ IPA created!"
+        echo "✅ IPA created at build/SCAM.ipa"
+        ls -lh build/SCAM.ipa
     
     - name: Package artifacts
       run: |

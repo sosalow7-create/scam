@@ -16,10 +16,7 @@ let package = Package(
         .target(
             name: "SCAM",
             dependencies: [],
-            path: "Sources",
-            resources: [
-                .process("Resources")
-            ]
+            path: "Sources/SCAM"
         )
     ]
 )
